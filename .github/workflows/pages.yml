@@ -1,0 +1,39 @@
+name: Publish web app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web
+
+  ship:
+    needs: pack
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.ship.outputs.page_url }}
+    steps:
+      - name: Publish
+        id: ship
+        uses: actions/deploy-pages@v5

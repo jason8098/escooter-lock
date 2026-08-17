@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Scooter Lock",
+  "short_name": "Lock",
+  "description": "Secure local scooter lock control.",
+  "start_url": "./#control",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": [
+    {
+      "src": "./ico.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

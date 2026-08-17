@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#07111f">
+    <meta name="description" content="Secure local control for your scooter lock.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; img-src 'self' data:; manifest-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'">
+    <title>Scooter Lock</title>
+    <link rel="icon" href="./ico.svg" type="image/svg+xml">
+    <link rel="manifest" href="./app.json">
+    <link rel="stylesheet" href="./lib/boot.css">
+    <link rel="stylesheet" href="./app.css">
+  </head>
+  <body>
+    <header class="appbar border-bottom">
+      <div class="container appbox d-flex align-items-center justify-content-between py-2">
+        <a class="brand d-flex align-items-center gap-2 text-decoration-none" href="#control" aria-label="Scooter Lock control">
+          <img src="./ico.svg" width="32" height="32" alt="">
+          <span>Scooter Lock</span>
+        </a>
+        <span id="topStat" class="badge text-bg-secondary" role="status">Offline</span>
+      </div>
+    </header>
+
+    <main class="container appbox">
+      <div id="msg" class="alert d-none mb-3" role="alert" aria-live="polite"></div>
+
+      <section id="control" class="view" aria-labelledby="ctlTitle">
+        <h1 id="ctlTitle" class="h5 mb-3">Control</h1>
+
+        <article class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+              <div>
+                <h2 class="h6 mb-1">Scooter connection</h2>
+                <p id="connText" class="sub mb-0">Connect when you are near the scooter.</p>
+              </div>
+              <span id="connDot" class="dot off" aria-hidden="true"></span>
+            </div>
+            <div id="bleWarn" class="alert alert-warning py-2 d-none">
+              Open this HTTPS page in Android Chrome to use Bluetooth.
+            </div>
+            <div class="d-flex gap-2 mb-3">
+              <button id="connBtn" class="btn btn-primary flex-grow-1" type="button">Connect</button>
+              <button id="discBtn" class="btn btn-outline-secondary d-none" type="button">Disconnect</button>
+            </div>
+
+            <form id="authForm" autocomplete="off">
+              <label class="form-label" for="pass">Passphrase</label>
+              <input id="pass" class="form-control mb-2" type="password" minlength="10" maxlength="64" autocomplete="off" placeholder="Enter passphrase or setup code" disabled required>
+              <div class="d-flex gap-2">
+                <button id="authBtn" class="btn btn-dark flex-grow-1" type="submit" disabled>Authenticate</button>
+                <button id="logBtn" class="btn btn-outline-secondary d-none" type="button">End session</button>
+              </div>
+              <p id="authText" class="form-text mb-0">Your passphrase stays in this page only and is cleared after use.</p>
+            </form>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-body text-center">
+            <div id="stateRing" class="state-ring unknown mx-auto mb-3" aria-hidden="true">
+              <span id="stateIcon">?</span>
+            </div>
+            <h2 id="lockText" class="h4 mb-1">State unknown</h2>
+            <p id="dispText" class="sub mb-3">Connect and authenticate to confirm the relay.</p>
+            <div class="row g-2">
+              <div class="col-6">
+                <button id="openBtn" class="btn btn-success w-100" type="button" disabled>Unlock</button>
+              </div>
+              <div class="col-6">
+                <button id="lockBtn" class="btn btn-danger hold-btn w-100" type="button" disabled>
+                  <span>Hold to lock</span>
+                </button>
+              </div>
+            </div>
+            <p id="gateText" class="form-text mb-0 mt-2">Locking is available only after the scooter display is off.</p>
+          </div>
+        </article>
+      </section>
+
+      <section id="live" class="view d-none" aria-labelledby="liveTitle">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h1 id="liveTitle" class="h5 mb-0">Live telemetry</h1>
+          <span id="teleStat" class="badge text-bg-secondary">Unavailable</span>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <article class="card metric"><span>Speed</span><strong><b id="speed">&mdash;</b> km/h</strong></article>
+          </div>
+          <div class="col-6">
+            <article class="card metric"><span>Battery</span><strong><b id="bat">&mdash;</b> %</strong></article>
+          </div>
+          <div class="col-6">
+            <article class="card metric"><span>Voltage</span><strong><b id="volt">&mdash;</b> V</strong></article>
+          </div>
+          <div class="col-6">
+            <article class="card metric"><span>Current</span><strong><b id="amps">&mdash;</b> A</strong></article>
+          </div>
+          <div class="col-6">
+            <article class="card metric"><span>Power</span><strong><b id="power">&mdash;</b> W</strong></article>
+          </div>
+          <div class="col-6">
+            <article class="card metric"><span>Temperature</span><strong><b id="temp">&mdash;</b> &deg;C</strong></article>
+          </div>
+          <div class="col-12">
+            <article class="card metric"><span>Odometer</span><strong><b id="odo">&mdash;</b> km</strong></article>
+          </div>
+        </div>
+        <article class="card">
+          <div class="card-body">
+            <h2 class="h6 mb-2">Controller status</h2>
+            <p id="faults" class="mb-1">No verified data.</p>
+            <p id="teleTime" class="form-text mb-0">Waiting for an authenticated connection.</p>
+          </div>
+        </article>
+      </section>
+
+      <section id="setup" class="view d-none" aria-labelledby="setTitle">
+        <h1 id="setTitle" class="h5 mb-3">Setup</h1>
+        <article class="card mb-3">
+          <div class="card-body">
+            <h2 class="h6 mb-2">Change passphrase</h2>
+            <p class="sub">Use 10&ndash;64 characters. Your new passphrase never leaves this phone.</p>
+            <form id="passForm" autocomplete="off">
+              <label class="form-label" for="newPass">New passphrase</label>
+              <input id="newPass" class="form-control mb-2" type="password" minlength="10" maxlength="64" autocomplete="off" disabled required>
+              <label class="form-label" for="pass2">Confirm passphrase</label>
+              <input id="pass2" class="form-control mb-3" type="password" minlength="10" maxlength="64" autocomplete="off" disabled required>
+              <button id="passBtn" class="btn btn-primary w-100" type="submit" disabled>Update passphrase</button>
+            </form>
+            <p class="form-text mb-0 mt-2">For first setup, authenticate with the one-time code shown over USB, then set your passphrase here.</p>
+          </div>
+        </article>
+
+        <article class="card mb-3">
+          <div class="card-body">
+            <h2 class="h6 mb-2">Device</h2>
+            <dl class="info mb-0">
+              <div><dt>Name</dt><dd id="devName">&mdash;</dd></div>
+              <div><dt>Device ID</dt><dd id="devId">&mdash;</dd></div>
+              <div><dt>Protocol</dt><dd id="proto">&mdash;</dd></div>
+              <div><dt>Capabilities</dt><dd id="caps">&mdash;</dd></div>
+            </dl>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-body">
+            <h2 class="h6 mb-2">Compatibility</h2>
+            <p id="compat" class="mb-0">Checking this browser&hellip;</p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <nav class="tabs" aria-label="Main navigation">
+      <div class="container appbox nav nav-pills nav-fill">
+        <a class="nav-link active" href="#control" data-view="control">Control</a>
+        <a class="nav-link" href="#live" data-view="live">Live</a>
+        <a class="nav-link" href="#setup" data-view="setup">Setup</a>
+      </div>
+    </nav>
+
+    <noscript>
+      <div class="container appbox alert alert-warning">JavaScript is required to connect to the scooter.</div>
+    </noscript>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+fw/build/
+fw/sdkconfig
+*.key
+*.pem
+claim.txt
+.DS_Store
+Thumbs.db
