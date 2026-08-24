@@ -395,8 +395,10 @@ esp_err_t bl_start(void)
              "{\"app\":{\"ver\":\"1.0.0\",\"proto\":1,\"sec\":2,"
              "\"sec_patch_ver\":1,\"mode\":\"%s\","
              "\"cap\":[\"ctrl\",\"sleep\"],"
-             "\"id\":\"%02X%02X%02X\"}}",
-             cr_owned() ? "owned" : "claim", mac[3], mac[4], mac[5]);
+             "\"id\":\"%02X%02X%02X\","
+             "\"mac\":\"%02X:%02X:%02X:%02X:%02X:%02X\"}}",
+             cr_owned() ? "owned" : "claim", mac[3], mac[4], mac[5],
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     protocomm_ble_config_t cfg = {0};
     strlcpy(cfg.device_name, name, sizeof(cfg.device_name));

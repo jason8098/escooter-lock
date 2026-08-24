@@ -5,7 +5,7 @@ import { SecCli, makeCred } from "./sec.js";
 const ENC = new TextEncoder();
 const DEC = new TextDecoder("utf-8", { fatal: true });
 const VIEWS = ["control", "setup"];
-const SAVE = { pass: "sl_pass", dev: "sl_dev", run: "sl_run" };
+const SAVE = { pass: "sl_pass", dev: "sl_dev", name: "sl_name", mac: "sl_mac", run: "sl_run" };
 const ble = new BleLink();
 let sec = null;
 let info = {};
@@ -125,7 +125,13 @@ function runPaint() {
   text("runText", start ? `Run time: ${runFmt(Date.now() - start)}` : "Run time: --");
 }
 function hasSave() {
-  return Boolean(localStorage.getItem(SAVE.pass));
+  return Boolean(localStorage.getItem(SAVE.pass) &&
+    (localStorage.getItem(SAVE.dev) || localStorage.getItem(SAVE.name)));
+}
+function saveDev() {
+  if (ble.dev?.id) localStorage.setItem(SAVE.dev, ble.dev.id);
+  if (ble.dev?.name) localStorage.setItem(SAVE.name, ble.dev.name);
+  if (typeof info.mac === "string") localStorage.setItem(SAVE.mac, info.mac);
 }
 function autoStop() {
   window.clearTimeout(autoId);
@@ -289,10 +295,10 @@ async function conn(auto = false) {
   busy = true;
   paint();
   try {
-    if (auto) await ble.resume(localStorage.getItem(SAVE.dev));
+    if (auto) await ble.resume(localStorage.getItem(SAVE.dev), localStorage.getItem(SAVE.name));
     else await ble.open();
-    if (ble.dev?.id) localStorage.setItem(SAVE.dev, ble.dev.id);
     setInfo(parse(await ble.readVer(auto ? CFG.recon : CFG.tout)));
+    saveDev();
     sec = new SecCli({ send: (data) => ble.xchg("sec", data, auto ? CFG.recon : CFG.tout) });
     if (auto) autoMsg = "";
     return true;
@@ -340,7 +346,7 @@ async function auth(ev) {
   if (!await login(pass)) return;
   if (info.mode !== "claim" && el("savePass").checked) {
     localStorage.setItem(SAVE.pass, pass);
-    if (ble.dev?.id) localStorage.setItem(SAVE.dev, ble.dev.id);
+    saveDev();
     autoOn = true;
     showMsg("Secure session ready. Passphrase saved for reconnect.", "success");
   } else {

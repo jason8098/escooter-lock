@@ -41,18 +41,24 @@ export class BleLink extends EventTarget {
     await this.useDev(dev);
   }
 
-  async resume(id) {
+  async resume(id, name) {
     if (!BleLink.ok() || !("getDevices" in navigator.bluetooth)) {
       throw new Error("Saved Bluetooth devices are not available in this browser.");
     }
     this.drop(false);
     const devs = await this.limit(navigator.bluetooth.getDevices(), CFG.recon);
-    const dev = devs.find((item) => item.id === id) ||
-      devs.find((item) => /^SCOOT-[0-9A-F]{6}$/i.test(item.name || ""));
-    if (!dev) throw new Error("The saved scooter Bluetooth permission is unavailable.");
-    // Service discovery can take several seconds after an ESP starts
-    // advertising. Do not cut a valid reconnect off after one retry period.
-    await this.useDev(dev, CFG.gatt);
+    const list = devs.filter((item) => item.id === id || item.name === name);
+    if (!list.length) throw new Error("The saved scooter Bluetooth permission is unavailable.");
+    let last;
+    for (const dev of list) {
+      try {
+        // Service discovery can take several seconds after an ESP starts
+        // advertising. Do not cut a valid reconnect off after one retry period.
+        await this.useDev(dev, CFG.gatt);
+        return;
+      } catch (err) { last = err; }
+    }
+    throw last;
   }
 
   async useDev(dev, tout = 0) {
