@@ -453,9 +453,7 @@ async function autoTry() {
     return;
   }
   if (!await login(pass, true)) {
-    autoOn = false;
-    autoStop();
-    showMsg("Saved passphrase could not authenticate. Connect and authenticate again.");
+    autoWait();
   }
 }
 function init() {
