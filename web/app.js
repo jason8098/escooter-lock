@@ -91,6 +91,22 @@ function runSet() {
   if (!runGet()) localStorage.setItem(SAVE.run, String(Date.now()));
 }
 function runClr() { localStorage.removeItem(SAVE.run); }
+function resetLoc() {
+  if (!window.confirm("Reset all app data saved on this phone? This does not change the scooter relay or passphrase.")) return;
+  autoOn = false;
+  autoStop();
+  for (const key of Object.values(SAVE)) localStorage.removeItem(key);
+  endAuth();
+  ble.close();
+  info = {};
+  el("savePass").checked = false;
+  text("devName", "--");
+  text("devId", "--");
+  text("proto", "--");
+  text("caps", "--");
+  runPaint();
+  showMsg("Local app data was reset. The scooter relay was not changed.", "success");
+}
 function runFmt(ms) {
   const sec = Math.max(0, Math.floor(ms / 1000));
   const hrs = Math.floor(sec / 3600);
@@ -487,6 +503,7 @@ function init() {
   });
   el("openBtn").addEventListener("click", unlock);
   el("passForm").addEventListener("submit", chgPass);
+  el("resetBtn").addEventListener("click", resetLoc);
   el("savePass").addEventListener("change", () => {
     if (!el("savePass").checked) {
       localStorage.removeItem(SAVE.pass);
