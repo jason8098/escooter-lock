@@ -111,7 +111,7 @@ function autoStop() {
 }
 function autoWait() {
   autoStop();
-  if (autoOn && hasSave()) autoId = window.setTimeout(autoTry, 3000);
+  if (autoOn && hasSave()) autoId = window.setTimeout(autoTry, CFG.retry);
 }
 function applyCtl(rsp) {
   if (typeof rsp.state === "string") cur.state = rsp.state.toUpperCase();

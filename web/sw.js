@@ -1,4 +1,4 @@
-const KEY = "sctl-v6";
+const KEY = "sctl-v8";
 const FILES = [
   "./",
   "./index.html",

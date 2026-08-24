@@ -8,5 +8,7 @@ export const UUID = Object.freeze({
 export const CFG = Object.freeze({
   hold: 3000,
   tout: 12000,
+  gatt: 10000,
   recon: 2500,
+  retry: 1000,
 });
