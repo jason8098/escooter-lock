@@ -16,6 +16,7 @@ let holdNo = 0;
 let busy = false;
 let autoId = 0;
 let autoOn = false;
+let autoMsg = "";
 
 const cur = { auth: false, state: "UNKNOWN", gate: "", fault: "" };
 
@@ -118,7 +119,7 @@ function runPaint() {
   text("runText", start ? `Run time: ${runFmt(Date.now() - start)}` : "Run time: --");
 }
 function hasSave() {
-  return Boolean(localStorage.getItem(SAVE.pass) && localStorage.getItem(SAVE.dev));
+  return Boolean(localStorage.getItem(SAVE.pass));
 }
 function autoStop() {
   window.clearTimeout(autoId);
@@ -287,10 +288,17 @@ async function conn(auto = false) {
     if (ble.dev?.id) localStorage.setItem(SAVE.dev, ble.dev.id);
     setInfo(parse(await ble.readVer(auto ? CFG.recon : CFG.tout)));
     sec = new SecCli({ send: (data) => ble.xchg("sec", data, auto ? CFG.recon : CFG.tout) });
+    if (auto) autoMsg = "";
     return true;
   } catch (err) {
     ble.close();
-    if (!auto) showMsg(errMsg(err));
+    if (auto) {
+      const msg = `Auto reconnect failed\n${err?.name || "Error"}: ${errMsg(err)}`;
+      if (msg !== autoMsg) {
+        autoMsg = msg;
+        window.alert(msg);
+      }
+    } else showMsg(errMsg(err));
     return false;
   } finally {
     busy = false;

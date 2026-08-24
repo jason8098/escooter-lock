@@ -47,7 +47,8 @@ export class BleLink extends EventTarget {
     }
     this.drop(false);
     const devs = await this.limit(navigator.bluetooth.getDevices(), CFG.recon);
-    const dev = devs.find((item) => item.id === id);
+    const dev = devs.find((item) => item.id === id) ||
+      devs.find((item) => /^SCOOT-[0-9A-F]{6}$/i.test(item.name || ""));
     if (!dev) throw new Error("The saved scooter Bluetooth permission is unavailable.");
     // Service discovery can take several seconds after an ESP starts
     // advertising. Do not cut a valid reconnect off after one retry period.
