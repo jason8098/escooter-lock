@@ -98,12 +98,14 @@ function runSet() {
   if (!runGet()) localStorage.setItem(SAVE.run, String(Date.now()));
 }
 function runClr() { localStorage.removeItem(SAVE.run); }
-function resetLoc() {
+async function resetLoc() {
   autoOn = false;
   autoStop();
-  localStorage.clear();
   endAuth();
   ble.close();
+  let count = 0;
+  try { count = await ble.forget(); } catch {}
+  localStorage.clear();
   info = {};
   el("savePass").checked = false;
   text("devName", "--");
@@ -111,7 +113,9 @@ function resetLoc() {
   text("proto", "--");
   text("caps", "--");
   runPaint();
-  showMsg("Local app data was reset. The scooter relay was not changed.", "success");
+  const msg = count ? "Local app data and remembered scooter Bluetooth access were reset." :
+    "Local app data was reset. The scooter relay was not changed.";
+  showMsg(msg, "success");
 }
 function runFmt(ms) {
   const sec = Math.max(0, Math.floor(ms / 1000));

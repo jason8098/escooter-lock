@@ -61,6 +61,16 @@ export class BleLink extends EventTarget {
     throw last;
   }
 
+  async forget() {
+    if (!BleLink.ok() || !("getDevices" in navigator.bluetooth)) return 0;
+    const devs = await navigator.bluetooth.getDevices();
+    const list = devs.filter((item) => /^SCOOT-[0-9A-F]{6}$/i.test(item.name || ""));
+    for (const dev of list) {
+      if (typeof dev.forget === "function") await dev.forget();
+    }
+    return list.length;
+  }
+
   async useDev(dev, tout = 0) {
     const due = tout ? performance.now() + tout : 0;
     const left = () => due ? Math.max(1, due - performance.now()) : 0;
