@@ -270,8 +270,8 @@ async function conn(auto = false) {
     if (auto) await ble.resume(localStorage.getItem(SAVE.dev));
     else await ble.open();
     if (ble.dev?.id) localStorage.setItem(SAVE.dev, ble.dev.id);
-    setInfo(parse(await ble.readVer()));
-    sec = new SecCli({ send: (data) => ble.xchg("sec", data) });
+    setInfo(parse(await ble.readVer(auto ? CFG.recon : CFG.tout)));
+    sec = new SecCli({ send: (data) => ble.xchg("sec", data, auto ? CFG.recon : CFG.tout) });
     return true;
   } catch (err) {
     ble.close();
@@ -315,6 +315,7 @@ async function auth(ev) {
   if (!await login(pass)) return;
   if (info.mode !== "claim" && el("savePass").checked) {
     localStorage.setItem(SAVE.pass, pass);
+    if (ble.dev?.id) localStorage.setItem(SAVE.dev, ble.dev.id);
     autoOn = true;
     showMsg("Secure session ready. Passphrase saved for reconnect.", "success");
   } else {
@@ -461,11 +462,16 @@ function init() {
   const okay = BleLink.ok() && SecCli.ok();
   el("bleWarn").classList.toggle("d-none", BleLink.ok());
   el("connBtn").disabled = !okay;
-  el("savePass").checked = Boolean(localStorage.getItem(SAVE.pass));
+  const pass = localStorage.getItem(SAVE.pass);
+  el("savePass").checked = Boolean(pass);
+  if (pass) el("pass").value = pass;
   text("compat", !BleLink.ok() ? "Unsupported here. Use Android Chrome with a secure browser origin." : !SecCli.ok() ? "This browser does not provide the required secure cryptography." : "Android Chrome and secure cryptography are available.");
   el("connBtn").addEventListener("click", () => {
     autoStop();
-    conn();
+    conn().then(async (ok) => {
+      const pass = localStorage.getItem(SAVE.pass);
+      if (ok && pass) await login(pass);
+    });
   });
   el("discBtn").addEventListener("click", () => {
     autoOn = false;
@@ -503,6 +509,7 @@ function init() {
   lock.addEventListener("contextmenu", (ev) => ev.preventDefault());
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stopHold();
+    else if (autoOn && !ble.linked) autoTry();
   });
   ble.addEventListener("bleoff", () => {
     endAuth();

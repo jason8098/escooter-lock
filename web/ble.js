@@ -46,28 +46,45 @@ export class BleLink extends EventTarget {
       throw new Error("Saved Bluetooth devices are not available in this browser.");
     }
     this.drop(false);
-    const devs = await navigator.bluetooth.getDevices();
+    const devs = await this.limit(navigator.bluetooth.getDevices(), CFG.recon);
     const dev = devs.find((item) => item.id === id);
     if (!dev) throw new Error("The saved scooter Bluetooth permission is unavailable.");
-    await this.useDev(dev);
+    await this.useDev(dev, CFG.recon);
   }
 
-  async useDev(dev) {
+  async useDev(dev, tout = 0) {
+    const due = tout ? performance.now() + tout : 0;
+    const left = () => due ? Math.max(1, due - performance.now()) : 0;
     this.dev = dev;
     dev.addEventListener("gattserverdisconnected", this.onOff);
     try {
-      const gatt = await dev.gatt.connect();
-      this.srv = await gatt.getPrimaryService(UUID.svc);
+      const gatt = await this.limit(dev.gatt.connect(), left());
+      if (this.dev !== dev) throw new Error("Bluetooth attempt ended.");
+      const srv = await this.limit(gatt.getPrimaryService(UUID.svc), left());
+      if (this.dev !== dev) throw new Error("Bluetooth attempt ended.");
+      this.srv = srv;
       for (const name of ["ver", "sec", "ctrl"]) {
-        const chr = await this.srv.getCharacteristic(UUID[name]);
+        const chr = await this.limit(this.srv.getCharacteristic(UUID[name]), left());
+        if (this.dev !== dev) throw new Error("Bluetooth attempt ended.");
         this.chr.set(name, chr);
       }
       this.dispatchEvent(new Event("bleon"));
     } catch (err) {
-      if (dev.gatt?.connected) dev.gatt.disconnect();
-      this.drop(false);
+      if (this.dev === dev) {
+        if (dev.gatt?.connected) dev.gatt.disconnect();
+        this.drop(false);
+      }
       throw err;
     }
+  }
+
+  limit(job, tout) {
+    if (!tout) return job;
+    let timer;
+    const wait = new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error("Bluetooth reconnect timed out.")), tout);
+    });
+    return Promise.race([job, wait]).finally(() => window.clearTimeout(timer));
   }
 
   close() {
@@ -78,8 +95,8 @@ export class BleLink extends EventTarget {
     }
   }
 
-  async readVer() {
-    return this.xchg("ver", Uint8Array.of(0));
+  async readVer(tout = CFG.tout) {
+    return this.xchg("ver", Uint8Array.of(0), tout);
   }
 
   async xchg(name, data, tout = CFG.tout) {
