@@ -94,7 +94,7 @@ function runClr() { localStorage.removeItem(SAVE.run); }
 function resetLoc() {
   autoOn = false;
   autoStop();
-  for (const key of Object.values(SAVE)) localStorage.removeItem(key);
+  localStorage.clear();
   endAuth();
   ble.close();
   info = {};
