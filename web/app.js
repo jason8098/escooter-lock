@@ -14,6 +14,8 @@ let txTail = Promise.resolve();
 let hold = null;
 let holdNo = 0;
 let busy = false;
+let autoId = 0;
+let autoOn = false;
 
 const cur = { auth: false, state: "UNKNOWN", gate: "", fault: "" };
 
@@ -99,6 +101,17 @@ function runFmt(ms) {
 function runPaint() {
   const start = runGet();
   text("runText", start ? `Run time: ${runFmt(Date.now() - start)}` : "Run time: --");
+}
+function hasSave() {
+  return Boolean(localStorage.getItem(SAVE.pass) && localStorage.getItem(SAVE.dev));
+}
+function autoStop() {
+  window.clearTimeout(autoId);
+  autoId = 0;
+}
+function autoWait() {
+  autoStop();
+  if (autoOn && hasSave()) autoId = window.setTimeout(autoTry, 3000);
 }
 function applyCtl(rsp) {
   if (typeof rsp.state === "string") cur.state = rsp.state.toUpperCase();
@@ -300,8 +313,14 @@ async function auth(ev) {
   const pass = el("pass").value;
   el("pass").value = "";
   if (!await login(pass)) return;
-  if (info.mode !== "claim" && el("savePass").checked) localStorage.setItem(SAVE.pass, pass);
-  else localStorage.removeItem(SAVE.pass);
+  if (info.mode !== "claim" && el("savePass").checked) {
+    localStorage.setItem(SAVE.pass, pass);
+    autoOn = true;
+    showMsg("Secure session ready. Passphrase saved for reconnect.", "success");
+  } else {
+    localStorage.removeItem(SAVE.pass);
+    autoOn = false;
+  }
 }
 async function unlock() {
   hideMsg();
@@ -392,7 +411,13 @@ async function chgPass(ev) {
   try {
     const cred = await makeCred("owner", one);
     await newReq(cred);
-    if (el("savePass").checked) localStorage.setItem(SAVE.pass, one);
+    if (el("savePass").checked) {
+      localStorage.setItem(SAVE.pass, one);
+      autoOn = true;
+    } else {
+      localStorage.removeItem(SAVE.pass);
+      autoOn = false;
+    }
     one = "";
     endAuth();
     ble.close();
@@ -417,10 +442,20 @@ function route() {
   }
   if (view !== "control") stopHold();
 }
-async function autoLink() {
+async function autoTry() {
+  autoId = 0;
+  if (!autoOn || !hasSave() || busy || ble.linked) return;
   const pass = localStorage.getItem(SAVE.pass);
   if (!pass || !BleLink.ok() || !SecCli.ok()) return;
-  if (await conn(true)) await login(pass, true);
+  if (!await conn(true)) {
+    autoWait();
+    return;
+  }
+  if (!await login(pass, true)) {
+    autoOn = false;
+    autoStop();
+    showMsg("Saved passphrase could not authenticate. Connect and authenticate again.");
+  }
 }
 function init() {
   const okay = BleLink.ok() && SecCli.ok();
@@ -428,16 +463,32 @@ function init() {
   el("connBtn").disabled = !okay;
   el("savePass").checked = Boolean(localStorage.getItem(SAVE.pass));
   text("compat", !BleLink.ok() ? "Unsupported here. Use Android Chrome with a secure browser origin." : !SecCli.ok() ? "This browser does not provide the required secure cryptography." : "Android Chrome and secure cryptography are available.");
-  el("connBtn").addEventListener("click", () => conn());
-  el("discBtn").addEventListener("click", () => ble.close());
+  el("connBtn").addEventListener("click", () => {
+    autoStop();
+    conn();
+  });
+  el("discBtn").addEventListener("click", () => {
+    autoOn = false;
+    autoStop();
+    ble.close();
+  });
   el("authForm").addEventListener("submit", auth);
   el("logBtn").addEventListener("click", () => {
+    autoOn = false;
+    autoStop();
     endAuth();
     ble.close();
     showMsg("Secure session ended. Relay state was not changed.", "secondary");
   });
   el("openBtn").addEventListener("click", unlock);
   el("passForm").addEventListener("submit", chgPass);
+  el("savePass").addEventListener("change", () => {
+    if (!el("savePass").checked) {
+      localStorage.removeItem(SAVE.pass);
+      autoOn = false;
+      autoStop();
+    }
+  });
   const lock = el("lockBtn");
   lock.addEventListener("pointerdown", startHold);
   lock.addEventListener("pointerleave", stopHold);
@@ -460,13 +511,15 @@ function init() {
     text("proto", "--");
     text("caps", "--");
     paint();
+    autoWait();
   });
   window.addEventListener("hashchange", route);
   route();
   runPaint();
   window.setInterval(runPaint, 1000);
   paint();
-  autoLink();
+  autoOn = hasSave();
+  autoTry();
   if ("serviceWorker" in navigator && window.isSecureContext) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   }
