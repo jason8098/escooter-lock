@@ -92,7 +92,6 @@ function runSet() {
 }
 function runClr() { localStorage.removeItem(SAVE.run); }
 function resetLoc() {
-  if (!window.confirm("Reset all app data saved on this phone? This does not change the scooter relay or passphrase.")) return;
   autoOn = false;
   autoStop();
   for (const key of Object.values(SAVE)) localStorage.removeItem(key);
