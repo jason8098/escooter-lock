@@ -36,6 +36,12 @@ function errMsg(err) {
   if (err?.name === "SecurityError") return "Bluetooth access was blocked by the browser.";
   return err?.message || "The request could not be completed.";
 }
+function autoErr(err) {
+  const msg = `Auto reconnect failed\n${err?.name || "Error"}: ${errMsg(err)}`;
+  if (msg === autoMsg) return;
+  autoMsg = msg;
+  window.alert(msg);
+}
 function nextId() {
   rid = (rid % 0xfffffffe) + 1;
   return rid;
@@ -292,13 +298,8 @@ async function conn(auto = false) {
     return true;
   } catch (err) {
     ble.close();
-    if (auto) {
-      const msg = `Auto reconnect failed\n${err?.name || "Error"}: ${errMsg(err)}`;
-      if (msg !== autoMsg) {
-        autoMsg = msg;
-        window.alert(msg);
-      }
-    } else showMsg(errMsg(err));
+    if (auto) autoErr(err);
+    else showMsg(errMsg(err));
     return false;
   } finally {
     busy = false;
@@ -323,7 +324,8 @@ async function login(pass, auto = false) {
   } catch (err) {
     endAuth();
     ble.close();
-    if (!auto) showMsg(`${errMsg(err)} Reconnect before trying again.`);
+    if (auto) autoErr(err);
+    else showMsg(`${errMsg(err)} Reconnect before trying again.`);
     return false;
   } finally {
     busy = false;
