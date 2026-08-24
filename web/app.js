@@ -464,12 +464,13 @@ function init() {
   el("savePass").checked = Boolean(pass);
   if (pass) el("pass").value = pass;
   text("compat", !BleLink.ok() ? "Unsupported here. Use Android Chrome with a secure browser origin." : !SecCli.ok() ? "This browser does not provide the required secure cryptography." : "Android Chrome and secure cryptography are available.");
-  el("connBtn").addEventListener("click", () => {
+  el("connBtn").addEventListener("click", async () => {
     autoStop();
-    conn().then(async (ok) => {
-      const pass = localStorage.getItem(SAVE.pass);
-      if (ok && pass) await login(pass);
-    });
+    const pass = localStorage.getItem(SAVE.pass);
+    let ok = hasSave() ? await conn(true) : false;
+    if (!ok) ok = await conn();
+    if (ok && pass) await login(pass);
+    if (!ok && autoOn) autoWait();
   });
   el("discBtn").addEventListener("click", () => {
     autoOn = false;
