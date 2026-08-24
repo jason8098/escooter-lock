@@ -18,6 +18,6 @@ typedef struct {
 esp_err_t lk_init(void);
 lk_info_t lk_get(void);
 esp_err_t lk_ready(const char **gate);
-esp_err_t lk_lock(bool off_ok, const char **gate);
+esp_err_t lk_lock(const char **gate);
 void lk_idle(void);
 const char *lk_name(lk_state_t state);

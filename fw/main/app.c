@@ -8,11 +8,10 @@
 #include "freertos/task.h"
 #include "lock.h"
 #include "pwr.h"
-#include "tele.h"
 
 void app_main(void)
 {
-    /* Make both relay coil outputs inactive before any recoverable service. */
+    /* Keep the SSR control output inactive before any recoverable service. */
     ESP_ERROR_CHECK(lk_init());
     ESP_ERROR_CHECK(cr_init());
 
@@ -22,11 +21,6 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(pw_init());
     ESP_ERROR_CHECK(bl_init());
-
-    err = te_init();
-    if (err != ESP_OK) {
-        ESP_LOGE("app", "Telemetry capture disabled: %s", esp_err_to_name(err));
-    }
 
     bool started = false;
     int64_t retry = 0;

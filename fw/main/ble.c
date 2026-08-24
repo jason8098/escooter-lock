@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +27,6 @@
 #include "protocomm_security.h"
 #include "protocomm_security2.h"
 #include "pwr.h"
-#include "tele.h"
 
 #define BL_NONE 0xffffu
 #define NP_LEN  406
@@ -69,7 +67,6 @@ static protocomm_ble_name_uuid_t s_eps[] = {
     {"ver",  0xff50},
     {"sec",  0xff51},
     {"ctrl", 0xff52},
-    {"tele", 0xff53},
 };
 
 /* Canonical service UUID: 021a9004-0382-4aea-bff4-6b3f1c5adfb4. */
@@ -100,14 +97,14 @@ static void status(char *rsp, size_t rsp_n, uint32_t id, bool ok,
     const char *fault = info.fault == NULL ? "" : info.fault;
     int n = snprintf(rsp, rsp_n,
                      "{\"v\":1,\"id\":%" PRIu32 ",\"ok\":%s,"
-                     "\"state\":\"%s\",\"disp\":\"%s\","
+                     "\"state\":\"%s\","
                      "\"gate\":\"%s\",\"fault\":\"%s\"%s}",
                      id, ok ? "true" : "false", lk_name(info.state),
-                     te_name(te_disp()), gate, fault, extra == NULL ? "" : extra);
+                     gate, fault, extra == NULL ? "" : extra);
     if (n < 0 || (size_t)n >= rsp_n) {
         snprintf(rsp, rsp_n,
                  "{\"v\":1,\"id\":%" PRIu32 ",\"ok\":false,"
-                 "\"state\":\"unknown\",\"disp\":\"unknown\","
+                 "\"state\":\"unknown\","
                  "\"gate\":\"internal\",\"fault\":\"response_size\"}", id);
     }
 }
@@ -253,9 +250,6 @@ static esp_err_t ctrl_cb(uint32_t sid, const uint8_t *in, ssize_t in_n,
         if (info.state != LK_READY && info.state != LK_LOCKED) {
             ok = false;
             gate = info.state == LK_FAULT ? "fault" : "not_ready";
-        } else if (te_disp() != TD_OFF) {
-            ok = false;
-            gate = "not_off";
         } else if (arm_make(sid, extra, sizeof(extra)) != ESP_OK) {
             ok = false;
             gate = "internal";
@@ -274,13 +268,9 @@ static esp_err_t ctrl_cb(uint32_t sid, const uint8_t *in, ssize_t in_n,
             s_arm.valid = false;
             ok = false;
             gate = "expired";
-        } else if (te_disp() != TD_OFF) {
-            s_arm.valid = false;
-            ok = false;
-            gate = "not_off";
         } else {
             s_arm.valid = false;
-            if (lk_lock(true, &gate) != ESP_OK) {
+            if (lk_lock(&gate) != ESP_OK) {
                 ok = false;
                 gate = lk_get().state == LK_FAULT ? "fault" : "not_ready";
             } else {
@@ -298,96 +288,6 @@ static esp_err_t ctrl_cb(uint32_t sid, const uint8_t *in, ssize_t in_n,
     esp_err_t err = out_copy(rsp, out, out_n);
     xSemaphoreGive(s_mux);
     return err;
-}
-
-static bool add_txt(char *buf, size_t cap, size_t *used, const char *fmt, ...)
-{
-    if (*used >= cap) {
-        return false;
-    }
-    va_list ap;
-    va_start(ap, fmt);
-    int n = vsnprintf(buf + *used, cap - *used, fmt, ap);
-    va_end(ap);
-    if (n < 0 || (size_t)n >= cap - *used) {
-        return false;
-    }
-    *used += n;
-    return true;
-}
-
-static esp_err_t tele_cb(uint32_t sid, const uint8_t *in, ssize_t in_n,
-                         uint8_t **out, ssize_t *out_n, void *priv)
-{
-    (void)sid;
-    (void)priv;
-    char req[160];
-    char rsp[C_RSPMAX + 1];
-    char op[8];
-    uint32_t ver, id, after;
-    uint32_t max = C_RAWMAX;
-    if (in == NULL || in_n <= 0 || (size_t)in_n >= sizeof(req) ||
-        memchr(in, '\0', in_n) != NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    memcpy(req, in, in_n);
-    req[in_n] = '\0';
-    if (js_u32(req, "v", &ver) != ESP_OK || ver != 1 ||
-        js_u32(req, "id", &id) != ESP_OK || id == 0 ||
-        js_str(req, "op", op, sizeof(op)) != ESP_OK || strcmp(op, "get") != 0 ||
-        js_u32(req, "after", &after) != ESP_OK) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    if (js_u32(req, "max", &max) != ESP_OK) {
-        max = C_RAWMAX;
-    }
-    if (!cr_owned() || __atomic_load_n(&s_reload, __ATOMIC_ACQUIRE)) {
-        snprintf(rsp, sizeof(rsp),
-                 "{\"v\":1,\"id\":%" PRIu32
-                 ",\"ok\":false,\"gate\":\"%s\"}", id,
-                 cr_owned() ? "reconnect" : "claim_only");
-        return out_copy(rsp, out, out_n);
-    }
-    if (max == 0) {
-        max = 1;
-    } else if (max > C_RAWMAX) {
-        max = C_RAWMAX;
-    }
-
-    te_snap_t snap;
-    ESP_RETURN_ON_ERROR(te_snap(after, &snap), TAG, "tele snapshot");
-    size_t count = snap.count < max ? snap.count : max;
-    uint32_t seq = count == 0 ? after : snap.raw[count - 1].seq;
-    size_t used = 0;
-    if (!add_txt(rsp, sizeof(rsp), &used,
-                 "{\"v\":1,\"id\":%" PRIu32 ",\"seq\":%" PRIu32
-                 ",\"drop\":%" PRIu32 ",\"raw\":[", id, seq, snap.drop)) {
-        return ESP_ERR_INVALID_SIZE;
-    }
-    for (size_t i = 0; i < count; ++i) {
-        char data[45];
-        size_t data_n = 0;
-        if (mbedtls_base64_encode((uint8_t *)data, sizeof(data), &data_n,
-                                  snap.raw[i].data, snap.raw[i].len) != 0) {
-            return ESP_FAIL;
-        }
-        data[data_n] = '\0';
-        if (!add_txt(rsp, sizeof(rsp), &used,
-                     "%s{\"seq\":%" PRIu32 ",\"ms\":%" PRIu32
-                     ",\"dir\":\"%s\",\"data\":\"%s\"}",
-                     i == 0 ? "" : ",", snap.raw[i].seq, snap.raw[i].ms,
-                     snap.raw[i].ch == 0 ? "rx0" : "rx1", data)) {
-            return ESP_ERR_INVALID_SIZE;
-        }
-    }
-    if (!add_txt(rsp, sizeof(rsp), &used,
-                 "],\"val\":{\"speed\":null,\"bat\":null,\"volt\":null,"
-                 "\"amp\":null,\"watt\":null,\"temp\":null,\"odo\":null,"
-                 "\"fault\":null}}")) {
-        return ESP_ERR_INVALID_SIZE;
-    }
-    pw_touch();
-    return out_copy(rsp, out, out_n);
 }
 
 void bl_kick(void)
@@ -494,7 +394,7 @@ esp_err_t bl_start(void)
     snprintf(s_vinfo, sizeof(s_vinfo),
              "{\"app\":{\"ver\":\"1.0.0\",\"proto\":1,\"sec\":2,"
              "\"sec_patch_ver\":1,\"mode\":\"%s\","
-             "\"cap\":[\"ctrl\",\"tele\",\"sleep\"],"
+             "\"cap\":[\"ctrl\",\"sleep\"],"
              "\"id\":\"%02X%02X%02X\"}}",
              cr_owned() ? "owned" : "claim", mac[3], mac[4], mac[5]);
 
@@ -521,9 +421,6 @@ esp_err_t bl_start(void)
     if (err == ESP_OK) {
         err = protocomm_add_endpoint(s_pc, "ctrl", ctrl_cb, NULL);
     }
-    if (err == ESP_OK) {
-        err = protocomm_add_endpoint(s_pc, "tele", tele_cb, NULL);
-    }
     if (err != ESP_OK) {
         bl_stop();
         return err;
@@ -539,7 +436,6 @@ void bl_stop(void)
     if (s_pc == NULL) {
         return;
     }
-    protocomm_remove_endpoint(s_pc, "tele");
     protocomm_remove_endpoint(s_pc, "ctrl");
     protocomm_unset_security(s_pc, "sec");
     protocomm_unset_version(s_pc, "ver");

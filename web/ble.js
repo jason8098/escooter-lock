@@ -32,19 +32,33 @@ export class BleLink extends EventTarget {
 
   async open() {
     if (!BleLink.ok()) {
-      throw new Error("Web Bluetooth needs Android Chrome on HTTPS.");
+      throw new Error("Web Bluetooth needs Android Chrome on a secure browser origin.");
     }
     this.drop(false);
     const dev = await navigator.bluetooth.requestDevice({
       filters: [{ services: [UUID.svc] }],
     });
+    await this.useDev(dev);
+  }
+
+  async resume(id) {
+    if (!BleLink.ok() || !("getDevices" in navigator.bluetooth)) {
+      throw new Error("Saved Bluetooth devices are not available in this browser.");
+    }
+    this.drop(false);
+    const devs = await navigator.bluetooth.getDevices();
+    const dev = devs.find((item) => item.id === id);
+    if (!dev) throw new Error("The saved scooter Bluetooth permission is unavailable.");
+    await this.useDev(dev);
+  }
+
+  async useDev(dev) {
     this.dev = dev;
     dev.addEventListener("gattserverdisconnected", this.onOff);
-
     try {
       const gatt = await dev.gatt.connect();
       this.srv = await gatt.getPrimaryService(UUID.svc);
-      for (const name of ["ver", "sec", "ctrl", "tele"]) {
+      for (const name of ["ver", "sec", "ctrl"]) {
         const chr = await this.srv.getCharacteristic(UUID[name]);
         this.chr.set(name, chr);
       }
@@ -69,7 +83,7 @@ export class BleLink extends EventTarget {
   }
 
   async xchg(name, data, tout = CFG.tout) {
-    if (!["ver", "sec", "ctrl", "tele"].includes(name)) {
+    if (!["ver", "sec", "ctrl"].includes(name)) {
       throw new Error("Invalid Bluetooth endpoint.");
     }
     return this.q.add(async () => {

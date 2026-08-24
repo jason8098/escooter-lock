@@ -1,4 +1,7 @@
-fw/build/
+build/
+*.bin
+*.elf
+*.map
 fw/sdkconfig
 *.key
 *.pem

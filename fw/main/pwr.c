@@ -27,7 +27,7 @@ static void sleep_now(void)
     rtc_gpio_pullup_en(CFG_WAKE);
     rtc_gpio_pulldown_dis(CFG_WAKE);
     ESP_ERROR_CHECK(esp_sleep_enable_ext0_wakeup(CFG_WAKE, 0));
-    ESP_LOGI("power", "Idle window ended; relay retained and wake button armed");
+    ESP_LOGI("power", "Idle window ended; SSR is off and wake button armed");
     esp_deep_sleep_start();
 }
 
@@ -45,8 +45,8 @@ static void pw_task(void *arg)
             connected = true;
             last = esp_timer_get_time();
         }
-        if (!connected && esp_timer_get_time() - last >=
-                              (int64_t)C_IDLE * 1000) {
+        if (!connected && lk_get().state != LK_READY &&
+            esp_timer_get_time() - last >= (int64_t)C_IDLE * 1000) {
             sleep_now();
         }
         vTaskDelay(pdMS_TO_TICKS(500));

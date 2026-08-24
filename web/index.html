@@ -39,7 +39,7 @@
               <span id="connDot" class="dot off" aria-hidden="true"></span>
             </div>
             <div id="bleWarn" class="alert alert-warning py-2 d-none">
-              Open this HTTPS page in Android Chrome to use Bluetooth.
+              Bluetooth is blocked on this browser origin. Use Android Chrome with a trusted page or add this local address as a secure origin in Chrome flags.
             </div>
             <div class="d-flex gap-2 mb-3">
               <button id="connBtn" class="btn btn-primary flex-grow-1" type="button">Connect</button>
@@ -49,11 +49,15 @@
             <form id="authForm" autocomplete="off">
               <label class="form-label" for="pass">Passphrase</label>
               <input id="pass" class="form-control mb-2" type="password" minlength="10" maxlength="64" autocomplete="off" placeholder="Enter passphrase or setup code" disabled required>
+              <div class="form-check mb-2">
+                <input id="savePass" class="form-check-input" type="checkbox">
+                <label class="form-check-label" for="savePass">Save passphrase on this phone</label>
+              </div>
               <div class="d-flex gap-2">
                 <button id="authBtn" class="btn btn-dark flex-grow-1" type="submit" disabled>Authenticate</button>
                 <button id="logBtn" class="btn btn-outline-secondary d-none" type="button">End session</button>
               </div>
-              <p id="authText" class="form-text mb-0">Your passphrase stays in this page only and is cleared after use.</p>
+              <p id="authText" class="form-text mb-0">Saved passphrases are stored only in this browser on this phone.</p>
             </form>
           </div>
         </article>
@@ -64,7 +68,8 @@
               <span id="stateIcon">?</span>
             </div>
             <h2 id="lockText" class="h4 mb-1">State unknown</h2>
-            <p id="dispText" class="sub mb-3">Connect and authenticate to confirm the relay.</p>
+            <p id="dispText" class="sub mb-1">Connect and authenticate to confirm the relay.</p>
+            <p id="runText" class="form-text mb-3">Run time: &mdash;</p>
             <div class="row g-2">
               <div class="col-6">
                 <button id="openBtn" class="btn btn-success w-100" type="button" disabled>Unlock</button>
@@ -75,44 +80,7 @@
                 </button>
               </div>
             </div>
-            <p id="gateText" class="form-text mb-0 mt-2">Locking is available only after the scooter display is off.</p>
-          </div>
-        </article>
-      </section>
-
-      <section id="live" class="view d-none" aria-labelledby="liveTitle">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-          <h1 id="liveTitle" class="h5 mb-0">Live telemetry</h1>
-          <span id="teleStat" class="badge text-bg-secondary">Unavailable</span>
-        </div>
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <article class="card metric"><span>Speed</span><strong><b id="speed">&mdash;</b> km/h</strong></article>
-          </div>
-          <div class="col-6">
-            <article class="card metric"><span>Battery</span><strong><b id="bat">&mdash;</b> %</strong></article>
-          </div>
-          <div class="col-6">
-            <article class="card metric"><span>Voltage</span><strong><b id="volt">&mdash;</b> V</strong></article>
-          </div>
-          <div class="col-6">
-            <article class="card metric"><span>Current</span><strong><b id="amps">&mdash;</b> A</strong></article>
-          </div>
-          <div class="col-6">
-            <article class="card metric"><span>Power</span><strong><b id="power">&mdash;</b> W</strong></article>
-          </div>
-          <div class="col-6">
-            <article class="card metric"><span>Temperature</span><strong><b id="temp">&mdash;</b> &deg;C</strong></article>
-          </div>
-          <div class="col-12">
-            <article class="card metric"><span>Odometer</span><strong><b id="odo">&mdash;</b> km</strong></article>
-          </div>
-        </div>
-        <article class="card">
-          <div class="card-body">
-            <h2 class="h6 mb-2">Controller status</h2>
-            <p id="faults" class="mb-1">No verified data.</p>
-            <p id="teleTime" class="form-text mb-0">Waiting for an authenticated connection.</p>
+            <p id="gateText" class="form-text mb-0 mt-2">Locking requires a three-second hold.</p>
           </div>
         </article>
       </section>
@@ -158,7 +126,6 @@
     <nav class="tabs" aria-label="Main navigation">
       <div class="container appbox nav nav-pills nav-fill">
         <a class="nav-link active" href="#control" data-view="control">Control</a>
-        <a class="nav-link" href="#live" data-view="live">Live</a>
         <a class="nav-link" href="#setup" data-view="setup">Setup</a>
       </div>
     </nav>
