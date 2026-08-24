@@ -29,7 +29,7 @@ static esp_err_t set_ssr(lk_state_t state, const char **gate)
 
 esp_err_t lk_init(void)
 {
-    /* SSR starts open. Do not energize it during startup or reset. */
+    /* The bootloader has already driven GPIO16 inactive. Keep it inactive. */
     gpio_set_level(CFG_SET, !CFG_ON);
     gpio_config_t out = {
         .pin_bit_mask = 1ULL << CFG_SET,

@@ -1,12 +1,12 @@
-# MOS output test firmware
+# MOS-safe test firmware
 
-This is a separate ESP-IDF test app. It sets both suspected MOS output pins high:
+This separate ESP-IDF app keeps both suspected MOS output pins inactive:
 
-- GPIO16 / OUT1: HIGH
-- GPIO17 / OUT2: HIGH
+- GPIO16 / OUT1: inactive
+- GPIO17 / OUT2: inactive
 
-Use only with a fused dummy load, meter, lamp, or resistor. Do not connect this
-test firmware to the scooter orange wire or to both latching-relay coils.
+Do not use this folder for the scooter SSR. Flash the real firmware from
+`fw/` instead.
 
 Flash from this folder:
 

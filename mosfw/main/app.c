@@ -17,11 +17,11 @@ void app_main(void)
         .intr_type = GPIO_INTR_DISABLE,
     };
 
+    gpio_set_level(MOS1, !ON);
+    gpio_set_level(MOS2, !ON);
     ESP_ERROR_CHECK(gpio_config(&cfg));
-    gpio_set_level(MOS1, ON);
-    gpio_set_level(MOS2, ON);
 
-    ESP_LOGW("mosfw", "GPIO16 and GPIO17 are HIGH");
+    ESP_LOGW("mosfw", "GPIO16 and GPIO17 are inactive");
 
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(1000));

@@ -231,7 +231,7 @@ function paint() {
   text("lockText", auth ? stateName() : "State unknown");
   text("dispText", auth ? "SSR control output state read from the ESP." : linked ? "Authenticate to read the SSR control state." : "Connect and authenticate to read the SSR control state.");
   el("openBtn").disabled = !auth || claim || busy || held || cur.state === "READY" || cur.state === "FAULT";
-  el("lockBtn").disabled = !auth || claim || busy || held || cur.state !== "READY";
+  el("lockBtn").disabled = !auth || claim || busy || cur.state !== "READY";
   text("gateText", gateMsg(auth));
   for (const id of ["newPass", "pass2", "passBtn"]) el(id).disabled = !auth || busy || held;
   runPaint();
